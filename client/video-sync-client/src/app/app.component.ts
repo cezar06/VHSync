@@ -3,10 +3,11 @@ import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrls: ['./app.component.css'],
+  imports: [RouterOutlet],
+  standalone: true
 })
 export class AppComponent {
-  title = 'video-sync-client';
+  title = 'Video Sync';
 }

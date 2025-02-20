@@ -1,19 +1,17 @@
 import express from 'express';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
+import { WebSocketServer } from 'ws';
+import { v4 as uuidv4 } from 'uuid';
+import { VideoSyncHandler } from './websocket/VideoSyncHandler';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-    cors: {
-        origin: process.env.CORS_ORIGIN || 'http://localhost:4200',
-        methods: ['GET', 'POST']
-    }
-});
+const server = createServer(app);
+const wss = new WebSocketServer({ server });
+const videoSyncHandler = new VideoSyncHandler();
 
 app.use(cors());
 app.use(express.json());
@@ -25,15 +23,26 @@ app.get('/', (req, res) => {
     res.send('Video Sync Server is running');
 });
 
-// Socket connection
-io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
-
-    socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
-    });
+// REST endpoint to create a new room
+app.post('/api/rooms', (req, res) => {
+    const roomId = uuidv4();
+    res.json({ roomId });
 });
 
-httpServer.listen(PORT, () => {
+// WebSocket connection handling
+wss.on('connection', (ws, req) => {
+    const url = new URL(req.url!, `http://${req.headers.host}`);
+    const roomId = url.searchParams.get('roomId');
+    const userId = url.searchParams.get('userId') || uuidv4();
+
+    if (!roomId) {
+        ws.close();
+        return;
+    }
+
+    videoSyncHandler.handleConnection(ws, roomId, userId);
+});
+
+server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
